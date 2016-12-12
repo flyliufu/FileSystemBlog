@@ -1,17 +1,21 @@
 package org.springframework.blog.controller;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.springframework.blog.bean.BlogBean;
 import org.springframework.blog.bean.ResponseBean;
 import org.springframework.blog.util.A;
 import org.springframework.blog.util.TextUtils;
+import org.springframework.blog.util.Tools;
 import org.springframework.mvc.extensions.ajax.AjaxUtils;
-import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.*;
-import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,12 +24,14 @@ import java.util.List;
  * <p>
  * Created by liufu on 2016/12/9.
  */
-@Controller
+@RestController
 public class BlogController {
     //本地环境
-    // private String blogHome = "/Users/liufu/Documents/tmp";
+    private String blogHome = "/Users/liufu/Documents/tmp";
     //线上环境
-    private String blogHome = "/usr/local/blog";
+//    private String blogHome = "/usr/local/blog";
+
+    private Gson gson = new Gson();
 
     @ModelAttribute
     public void ajaxAttribute(WebRequest request, Model model) {
@@ -33,14 +39,19 @@ public class BlogController {
     }
 
     @ResponseBody
+    @CrossOrigin
     @RequestMapping(method = RequestMethod.POST, value = "/blogAdd")
-    public ResponseBean addBlog(@RequestParam("block") String block, @RequestParam("title") String title,
-                                @RequestParam("content") String content) throws IOException {
-
-        block = URLDecoder.decode(block, "UTF-8");
-        title = URLDecoder.decode(title, "UTF-8");
-
+    public ResponseBean addBlog(HttpServletRequest request) throws IOException {
+        request.setCharacterEncoding("UTF-8");
         ResponseBean responseBean = new ResponseBean();
+
+        String json = Tools.getString(request);
+        if (TextUtils.isEmpty(json)) {
+            responseBean.setCode(A.code.FAILED);
+            responseBean.setMsg("请求参数为空");
+            return responseBean;
+        }
+
         if (TextUtils.isEmpty(blogHome)) {
             responseBean.setCode(A.code.FAILED);
             responseBean.setMsg("请设置成员变量：BLOG_HOME");
@@ -55,16 +66,17 @@ public class BlogController {
                 return responseBean;
             }
         }
-        File file = new File(root, block);
+        BlogBean blogBean = gson.fromJson(json, BlogBean.class);
+        File file = new File(root, blogBean.getBlock());
         if (!file.exists()) {
             boolean mkdirs = file.mkdirs();
             if (!mkdirs) {
                 responseBean.setCode(A.code.FAILED);
-                responseBean.setMsg(String.format("创建Blog 模块%s错误", block));
+                responseBean.setMsg(String.format("创建Blog 模块%s错误", blogBean.getBlock()));
                 return responseBean;
             }
         }
-        File blog = new File(file, A.SUB_FIX + title);
+        File blog = new File(file, blogBean.getTitle() + A.SUB_FIX);
         if (blog.exists()) {
             responseBean.setCode(A.code.FAILED);
             responseBean.setMsg("该博客已存在");
@@ -78,7 +90,7 @@ public class BlogController {
         }
         try {
             FileOutputStream fos = new FileOutputStream(blog);
-            fos.write(content.getBytes("UTF-8"));
+            fos.write(blogBean.getContent().getBytes("UTF-8"));
             fos.close();
         } catch (Exception e) {
             responseBean.setCode(A.code.FAILED);
@@ -89,12 +101,12 @@ public class BlogController {
         return responseBean;
     }
 
-
     @ResponseBody
+    @CrossOrigin
     @RequestMapping(method = RequestMethod.GET, value = "/blogList")
-    public ResponseBean<List<BlogBean>> list(@RequestParam("blockPath") String blockPath) throws UnsupportedEncodingException {
+    public ResponseBean<List<BlogBean>> list(@RequestParam("blockPath") String blockPath)
+            throws UnsupportedEncodingException {
 
-        blockPath = URLDecoder.decode(blockPath, "UTF-8");
         ResponseBean<List<BlogBean>> response = new ResponseBean<>();
         if (!"root".equals(blockPath)) {
             // tempUrl = blogHome.concat(String.format("%s%s", File.separator, path));
@@ -143,12 +155,10 @@ public class BlogController {
 
 
     @ResponseBody
+    @CrossOrigin
     @RequestMapping(method = RequestMethod.GET, value = "/blogContent")
     public ResponseBean<String> getContent(@RequestParam("block") String block, @RequestParam("title") String title)
             throws FileNotFoundException, UnsupportedEncodingException {
-
-        block = URLDecoder.decode(block, "UTF-8");
-        title = URLDecoder.decode(title, "UTF-8");
 
         ResponseBean<String> response = new ResponseBean<>();
         String filePath = blogHome.concat(File.separator).concat(block).concat(File.separator)

@@ -10,7 +10,16 @@ public class BlogBean implements Serializable {
 
     private String title;
     private String block;
+    private String content;
     private List<BlogBean> children;
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
 
     public List<BlogBean> getChildren() {
         return children;

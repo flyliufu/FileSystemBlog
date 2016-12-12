@@ -9,15 +9,15 @@ import java.io.Serializable;
  */
 public class ResponseBean<T> implements Serializable {
 
-    private String code = A.code.SUCCESS;
+    private int code = A.code.SUCCESS;
     private String msg;
     private T content;
 
-    public String getCode() {
+    public int getCode() {
         return code;
     }
 
-    public void setCode(String code) {
+    public void setCode(int code) {
         this.code = code;
     }
 
