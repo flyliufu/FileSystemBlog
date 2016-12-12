@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 博客操作controller
+ * <p>
  * Created by liufu on 2016/12/9.
  */
 @Controller
@@ -31,8 +33,8 @@ public class BlogController {
     }
 
     @ResponseBody
-    @RequestMapping(method = RequestMethod.POST, value = "/blogAdd/{block}/{title}")
-    public ResponseBean addBlog(@PathVariable String block, @PathVariable String title,
+    @RequestMapping(method = RequestMethod.POST, value = "/blogAdd")
+    public ResponseBean addBlog(@RequestParam("block") String block, @RequestParam("title") String title,
                                 @RequestParam("content") String content) throws IOException {
 
         block = URLDecoder.decode(block, "UTF-8");
@@ -89,8 +91,8 @@ public class BlogController {
 
 
     @ResponseBody
-    @RequestMapping(method = RequestMethod.GET, value = "/blogList/{blockPath}")
-    public ResponseBean<List<BlogBean>> list(@PathVariable String blockPath) throws UnsupportedEncodingException {
+    @RequestMapping(method = RequestMethod.GET, value = "/blogList")
+    public ResponseBean<List<BlogBean>> list(@RequestParam("blockPath") String blockPath) throws UnsupportedEncodingException {
 
         blockPath = URLDecoder.decode(blockPath, "UTF-8");
         ResponseBean<List<BlogBean>> response = new ResponseBean<>();
@@ -141,8 +143,9 @@ public class BlogController {
 
 
     @ResponseBody
-    @RequestMapping(method = RequestMethod.GET, value = "/blogContent/{block}/{title}")
-    public ResponseBean<String> getContent(@PathVariable String block, @PathVariable String title) throws FileNotFoundException, UnsupportedEncodingException {
+    @RequestMapping(method = RequestMethod.GET, value = "/blogContent")
+    public ResponseBean<String> getContent(@RequestParam("block") String block, @RequestParam("title") String title)
+            throws FileNotFoundException, UnsupportedEncodingException {
 
         block = URLDecoder.decode(block, "UTF-8");
         title = URLDecoder.decode(title, "UTF-8");
