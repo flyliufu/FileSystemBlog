@@ -5,6 +5,8 @@ package org.springframework.blog.util;
  */
 public class A {
     public static final String SUB_FIX = ".md";
+    public static final String CONF_FILE_NAME = ".conf";
+    public static final String CONF_TAG_NAME = ".tag";
 
     public static class code {
         public static final int SUCCESS = 0;

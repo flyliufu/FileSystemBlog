@@ -1,9 +1,8 @@
 package org.springframework.blog.controller;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
+import org.apache.log4j.Logger;
 import org.springframework.blog.bean.BlogBean;
 import org.springframework.blog.bean.ResponseBean;
 import org.springframework.blog.util.A;
@@ -18,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 博客操作controller
@@ -26,10 +26,11 @@ import java.util.List;
  */
 @RestController
 public class BlogController {
+    private Logger logger = Logger.getLogger(this.getClass());
     //本地环境
-    private String blogHome = "/Users/liufu/Documents/tmp";
+//    private String blogHome = "/Users/liufu/Documents/tmp";
     //线上环境
-//    private String blogHome = "/usr/local/blog";
+    private String blogHome = "/usr/local/blog";
 
     private Gson gson = new Gson();
 
@@ -38,13 +39,10 @@ public class BlogController {
         model.addAttribute("ajaxRequest", AjaxUtils.isAjaxRequest(request));
     }
 
-    @ResponseBody
     @CrossOrigin
     @RequestMapping(method = RequestMethod.POST, value = "/blogAdd")
     public ResponseBean addBlog(HttpServletRequest request) throws IOException {
-        request.setCharacterEncoding("UTF-8");
         ResponseBean responseBean = new ResponseBean();
-
         String json = Tools.getString(request);
         if (TextUtils.isEmpty(json)) {
             responseBean.setCode(A.code.FAILED);
@@ -76,7 +74,10 @@ public class BlogController {
                 return responseBean;
             }
         }
-        File blog = new File(file, blogBean.getTitle() + A.SUB_FIX);
+        String fileName = new String(blogBean.getTitle().getBytes(), "UTF-8") + A.SUB_FIX;
+        logger.info(fileName);
+
+        File blog = new File(file, fileName);
         if (blog.exists()) {
             responseBean.setCode(A.code.FAILED);
             responseBean.setMsg("该博客已存在");
@@ -101,14 +102,22 @@ public class BlogController {
         return responseBean;
     }
 
-    @ResponseBody
     @CrossOrigin
-    @RequestMapping(method = RequestMethod.GET, value = "/blogList")
-    public ResponseBean<List<BlogBean>> list(@RequestParam("blockPath") String blockPath)
-            throws UnsupportedEncodingException {
+    @RequestMapping(method = RequestMethod.POST, value = "/blogList")
+    public ResponseBean<List<BlogBean>> list(HttpServletRequest request) throws IOException {
 
         ResponseBean<List<BlogBean>> response = new ResponseBean<>();
-        if (!"root".equals(blockPath)) {
+        String json = Tools.getString(request);
+        if (TextUtils.isEmpty(json)) {
+            response.setCode(A.code.FAILED);
+            response.setMsg("请求参数为空");
+            return response;
+        }
+
+        Map<String, String> map = gson.fromJson(json, new TypeToken<Map<String, String>>() {
+        }.getType());
+
+        if (!map.containsKey("blockPath") && !"root".equals(map.get("blockPath"))) {
             // tempUrl = blogHome.concat(String.format("%s%s", File.separator, path));
             response.setMsg("目前只有根目录可以查询");
             response.setCode(A.code.FAILED);
@@ -118,7 +127,6 @@ public class BlogController {
         File file = new File(blogHome);
         File[] blocks = file.listFiles();
         if (blocks == null) {
-
             response.setCode(A.code.FAILED);
             response.setMsg("还没有模块信息");
             return response;
@@ -154,41 +162,52 @@ public class BlogController {
     }
 
 
-    @ResponseBody
     @CrossOrigin
-    @RequestMapping(method = RequestMethod.GET, value = "/blogContent")
-    public ResponseBean<String> getContent(@RequestParam("block") String block, @RequestParam("title") String title)
-            throws FileNotFoundException, UnsupportedEncodingException {
-
+    @RequestMapping(method = RequestMethod.POST, value = "/blogContent")
+    public ResponseBean<String> getContent(HttpServletRequest request) throws IOException {
         ResponseBean<String> response = new ResponseBean<>();
-        String filePath = blogHome.concat(File.separator).concat(block).concat(File.separator)
-                .concat(title).concat(A.SUB_FIX);
+
+        String json = Tools.getString(request);
+        if (TextUtils.isEmpty(json)) {
+            response.setCode(A.code.FAILED);
+            response.setMsg("请求参数为空");
+            return response;
+        }
+
+        BlogBean blogBean = gson.fromJson(json, BlogBean.class);
+        String filePath = blogHome.concat(File.separator).concat(blogBean.getBlock())
+                .concat(File.separator).concat(blogBean.getTitle()).concat(A.SUB_FIX);
         File file = new File(filePath);
 
         if (!file.exists()) {
             response.setCode(A.code.FAILED);
             response.setMsg("博客不存在");
+            return response;
         }
 
-        FileInputStream fis = new FileInputStream(file);
+        response.setContent(Tools.readString4File(file));
+        response.setMsg("查询成功");
+        return response;
+    }
 
-        byte[] buffer = new byte[512];
-        int len;
-        StringBuffer sb = new StringBuffer();
-        try {
-            while ((len = fis.read(buffer)) != -1) {
-                sb.append(new String(buffer, 0, len));
-            }
-            response.setContent(sb.toString());
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                fis.close();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+
+    @CrossOrigin
+    @RequestMapping(method = RequestMethod.POST, value = "/blogTag")
+    public ResponseBean<String[]> getTag(HttpServletRequest request) throws IOException {
+        ResponseBean<String[]> response = new ResponseBean<>();
+
+        String filePath = blogHome.concat(File.separator).concat(A.CONF_FILE_NAME).concat(File.separator).concat(A.CONF_TAG_NAME);
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            response.setCode(A.code.FAILED);
+            response.setMsg("标签配置不存在");
+            return response;
         }
+        String json = Tools.readString4File(file);
+        String[] list = gson.fromJson(json, new TypeToken<String[]>() {
+        }.getType());
+        response.setContent(list);
         response.setMsg("查询成功");
         return response;
     }
