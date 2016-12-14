@@ -12,12 +12,12 @@ import org.springframework.mvc.extensions.ajax.AjaxUtils;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 博客操作controller
@@ -28,9 +28,9 @@ import java.util.Map;
 public class BlogController {
     private Logger logger = Logger.getLogger(this.getClass());
     //本地环境
-//    private String blogHome = "/Users/liufu/Documents/tmp";
+    private String blogHome = "/Users/liufu/Documents/tmp/";
     //线上环境
-    private String blogHome = "/usr/local/blog";
+//    private String blogHome = "/usr/local/blog";
 
     private Gson gson = new Gson();
 
@@ -39,7 +39,6 @@ public class BlogController {
         model.addAttribute("ajaxRequest", AjaxUtils.isAjaxRequest(request));
     }
 
-    @CrossOrigin
     @RequestMapping(method = RequestMethod.POST, value = "/blogAdd")
     public ResponseBean addBlog(HttpServletRequest request) throws IOException {
         ResponseBean responseBean = new ResponseBean();
@@ -102,7 +101,6 @@ public class BlogController {
         return responseBean;
     }
 
-    @CrossOrigin
     @RequestMapping(method = RequestMethod.POST, value = "/blogList")
     public ResponseBean<List<BlogBean>> list(HttpServletRequest request) throws IOException {
 
@@ -161,8 +159,6 @@ public class BlogController {
         return response;
     }
 
-
-    @CrossOrigin
     @RequestMapping(method = RequestMethod.POST, value = "/blogContent")
     public ResponseBean<String> getContent(HttpServletRequest request) throws IOException {
         ResponseBean<String> response = new ResponseBean<>();
@@ -190,8 +186,6 @@ public class BlogController {
         return response;
     }
 
-
-    @CrossOrigin
     @RequestMapping(method = RequestMethod.POST, value = "/blogTag")
     public ResponseBean<String[]> getTag(HttpServletRequest request) throws IOException {
         ResponseBean<String[]> response = new ResponseBean<>();
@@ -210,5 +204,51 @@ public class BlogController {
         response.setContent(list);
         response.setMsg("查询成功");
         return response;
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/savPic")
+    public ResponseBean<String> savePic(MultipartHttpServletRequest request) {
+        ResponseBean<String> response = new ResponseBean<>();
+
+        Set set = request.getFileMap().entrySet();
+        for (Object aSet : set) {
+            Map.Entry me = (Map.Entry) aSet;
+            String fileName = (String) me.getKey();
+            MultipartFile multipartFile = (MultipartFile) me.getValue();
+            logger.info("Original fileName - " + multipartFile.getOriginalFilename());
+            logger.info("fileName - " + fileName);
+            writeToDisk(fileName, multipartFile);
+        }
+        if (set.size() == 0) {
+            response.setMsg("没有相关文件上传");
+            response.setCode(A.code.FAILED);
+        } else {
+            response.setMsg("上传成功");
+        }
+        return response;
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/localUpload")
+    public ResponseBean<String> localUpload(@RequestParam("name") String name,
+                                            @RequestParam("file") MultipartFile file,
+                                            MultipartHttpServletRequest request) {
+        ResponseBean<String> response = new ResponseBean<>();
+
+        writeToDisk(file.getName() + "1", file);
+        response.setCode(A.code.SUCCESS);
+        response.setMsg("上传成功");
+        response.setContent(file.getName());
+        return response;
+    }
+
+    public void writeToDisk(String filename, MultipartFile multipartFile) {
+        try {
+            String fullFileName = blogHome + filename;
+            FileOutputStream fos = new FileOutputStream(fullFileName);
+            fos.write(multipartFile.getBytes());
+            fos.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 }
