@@ -311,10 +311,9 @@
                 <version>1.1</version>
                 <configuration>
                     <!--<urll>http://localhost:8080/manager</urll>-->
-                    <url>http://191.101.10.186:8080/manager</url>
                     <server>tomcat</server>
-                    <username>liufu</username>
-                    <password>123456a</password>
+                    <username>username</username>
+                    <password>password</password>
                     <path>/blog</path>
                 </configuration>
             </plugin>
